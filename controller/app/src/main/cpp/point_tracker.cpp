@@ -14,7 +14,7 @@ using namespace std;
 
 //float *temp_array;
 std::vector<Point3f> model_points;
-std::vector<Point2f> object_points;
+std::vector<Point3f> object_points;
 
 Point2f point_tracker::avg_coord(std::vector<Point2f> getPoints) {
 
@@ -55,7 +55,7 @@ void point_tracker::refresh_model_points(std::vector<Point2f> getPoints) {
     // 3D model points.
     for (int i = 0; i < getPoints.size(); i++) {
         model_points.push_back(Point3f(getPoints[i].x, getPoints[i].y, 10.0f));
-        object_points.push_back(Point2f(getPoints[i].x, getPoints[i].y));
+        object_points.push_back(Point3f(getPoints[i].x, getPoints[i].y, i));
     }
 }
 
@@ -109,6 +109,7 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
     if (info.touch_status == 0) {
         refresh_model_points(image_points);
         info.start_tracking = 0;
+        *Rot = info.R.clone();
         return true;
     }
 
@@ -118,7 +119,11 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
         int diff = g_size - m_size;
         if (diff != 0) {
             refresh_model_points(image_points);
+            *Rot = info.R.clone();
+            return true;
         }
+
+        //check label
 
         //Camera internals
         int flags = SOLVEPNP_SQPNP;
@@ -145,7 +150,7 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
 
         for (int i = 0; i < g_size; i++) {
             line(img, mid_point, image_points[i], Scalar(255,255,255), 1);
-            line(img, image_points[i], object_points[i], Scalar(255,0,255), 1);
+            line(img, image_points[i], Point2f(object_points[i].x, object_points[i].y), Scalar(255,0,255), 1);
             putText(img, std::to_string(i + 1), Point2f(image_points[i].x + 10 ,image_points[i].y + 10), FONT_HERSHEY_SIMPLEX, 1, Scalar(255,255,255), 2);
         }
 /*
@@ -191,7 +196,7 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
 
 
         //여기 모르겠음.
-        //irvec = -irvec;
+        irvec = -irvec;
 
         //https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga61585db663d9da06b68e70cfbf6a1eac
         //https://darkpgmr.tistory.com/99
