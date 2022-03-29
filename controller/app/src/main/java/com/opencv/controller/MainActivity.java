@@ -10,6 +10,8 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -35,6 +37,12 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +67,7 @@ public class MainActivity extends AppCompatActivity
     public native void GetRvecTvec(float[] mat_addr_rvec, float[] mat_addr_info);
     public native void NativeInfo(float[] mat_addr_tvec);
     public native void InitMatrix();
+    public native void InitJniWithByteBuffer(ByteBuffer modelBuffer);
 
     static int bDetectObj = 0;
 
@@ -125,69 +134,81 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.d(TAG, "onCreate");
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        try {
+            Log.d(TAG, "onCreate");
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        setContentView(R.layout.activity_main);
+            setContentView(R.layout.activity_main);
 
-        // opengl
-        gLView = new MyGLSurfaceView(this);
-        addContentView(gLView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        Log.d(TAG, "init OpenGL");
-        //add Permission to ArrayList
-        permissions.add(Manifest.permission.CAMERA);
-        checkPermissions();
+            // opengl
+            gLView = new MyGLSurfaceView(this);
+            addContentView(gLView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+            Log.d(TAG, "init OpenGL");
+            //add Permission to ArrayList
+            permissions.add(Manifest.permission.CAMERA);
+            checkPermissions();
 
 //      mOpenCvCameraView = (CameraBridgeViewBase)findViewById(R.id.activity_surface_view);
-        mOpenCvCameraView = (CameraBridgeViewBase) new JavaCameraView(this, -1);
-        mOpenCvCameraView.setCvCameraViewListener(this);
-        mOpenCvCameraView.setCameraIndex(0); // front-camera(1),  back-camera(0)
-        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-        addContentView(mOpenCvCameraView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+            mOpenCvCameraView = (CameraBridgeViewBase) new JavaCameraView(this, -1);
+            mOpenCvCameraView.setCvCameraViewListener(this);
+            mOpenCvCameraView.setCameraIndex(0); // front-camera(1),  back-camera(0)
+            mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
+            addContentView(mOpenCvCameraView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        controlInflater = LayoutInflater.from(this);
-        viewControl = controlInflater.inflate(R.layout.control, null);
+            controlInflater = LayoutInflater.from(this);
+            viewControl = controlInflater.inflate(R.layout.control, null);
 
-        addContentView(viewControl, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+            addContentView(viewControl, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        java_textview = (TextView) viewControl.findViewById(R.id.text_java);
-        java_textview.setText("java_text view");
-        jv_row1 = (TextView) viewControl.findViewById(R.id.jv_row1);
-        jv_row2 = (TextView) viewControl.findViewById(R.id.jv_row2);
-        jv_row3 = (TextView) viewControl.findViewById(R.id.jv_row3);
-        jv_row4 = (TextView) viewControl.findViewById(R.id.jv_row4);
-        native_textview = (TextView) viewControl.findViewById(R.id.text_native);
-        native_textview.setText("native_text view");
-        nv_row1 = (TextView) viewControl.findViewById(R.id.nv_row1);
-        nv_row2 = (TextView) viewControl.findViewById(R.id.nv_row2);
-        nv_row3 = (TextView) viewControl.findViewById(R.id.nv_row3);
-        nv_row4 = (TextView) viewControl.findViewById(R.id.nv_row4);
-        // NDK Rotation Matrix initialize
-        InitMatrix();
-        // Example of a call to a native method
-        //textView.setText(stringFromJNI());
+            java_textview = (TextView) viewControl.findViewById(R.id.text_java);
+            java_textview.setText("java_text view");
+            jv_row1 = (TextView) viewControl.findViewById(R.id.jv_row1);
+            jv_row2 = (TextView) viewControl.findViewById(R.id.jv_row2);
+            jv_row3 = (TextView) viewControl.findViewById(R.id.jv_row3);
+            jv_row4 = (TextView) viewControl.findViewById(R.id.jv_row4);
+            native_textview = (TextView) viewControl.findViewById(R.id.text_native);
+            native_textview.setText("native_text view");
+            nv_row1 = (TextView) viewControl.findViewById(R.id.nv_row1);
+            nv_row2 = (TextView) viewControl.findViewById(R.id.nv_row2);
+            nv_row3 = (TextView) viewControl.findViewById(R.id.nv_row3);
+            nv_row4 = (TextView) viewControl.findViewById(R.id.nv_row4);
+            // NDK Rotation Matrix initialize
+            InitMatrix();
+            // Example of a call to a native method
+            //textView.setText(stringFromJNI());
+            /*
+            AssetManager am = getResources().getAssets();
+            Log.d(TAG, "resource lists : " + am.toString());
+            InputStream in = null;
+            in = am.open("test.txt");
+            */
+            AssetFileDescriptor fileDescriptor = getResources().getAssets().openFd("test.txt");
+            FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+            FileChannel fileChannel = inputStream.getChannel();
+            long startOffset = fileDescriptor.getStartOffset();
+            long declaredLength = fileDescriptor.getDeclaredLength();
+            MappedByteBuffer modelBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+            InitJniWithByteBuffer(modelBuffer);
+            Log.d(TAG, "try to get assets : " + fileDescriptor.getLength() + " " + fileDescriptor.toString());
 
+            // Bluetooth
+            if (true) { // for GL TEST
+                if (btService == null) {
+                    Log.i(TAG, "try new BluetoothService");
+                    btService = new BluetoothService(this, mHandler);
+                }
 
-
-        // Bluetooth
-        if (true) { // for GL TEST
-            if (btService == null) {
-                Log.i(TAG, "try new BluetoothService");
-                btService = new BluetoothService(this, mHandler);
+                if (btService.mAdapter == null) {
+                    Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+                    finish();
+                    return;
+                }
             }
 
-			if(btService.mAdapter == null)
-            {
-                Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
-                finish();
-                return;
-            }
-        }
-
-        // Sensor
+            // Sensor
         /*
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mGyro = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -195,6 +216,9 @@ public class MainActivity extends AppCompatActivity
         mAccel = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         mMySensor = new MySensor();
          */
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

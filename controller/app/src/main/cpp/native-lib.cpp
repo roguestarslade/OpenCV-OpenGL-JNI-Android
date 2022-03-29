@@ -22,6 +22,15 @@ Mat gr;
 point_obj objLeft;
 pt_camera_info info;
 
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_opencv_controller_MainActivity_InitJniWithByteBuffer(JNIEnv* env, jobject thiz, jobject model_buffer) {
+      char* buffer = static_cast<char*>(env->GetDirectBufferAddress(model_buffer));
+      size_t buffer_size = static_cast<size_t>(env->GetDirectBufferCapacity(model_buffer));
+      __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "InitJniWithByteBuffer: %s ", buffer);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_opencv_controller_MainActivity_InitMatrix(JNIEnv *env, jobject thiz) {
@@ -114,8 +123,7 @@ Java_com_opencv_controller_MainActivity_ConvertRGBtoGray(JNIEnv *env, jobject th
      //     bResL = pt.track(objLeft.points, info, &objLeft.gR, &objLeft.gr, &objLeft.gt);
         bResL = pt.estimate_pose(info, matResult, objLeft.points, &objLeft.gR, &objLeft.gr, &objLeft.gt);
     } else {
-        __android_log_print(ANDROID_LOG_DEBUG, APPNAME,
-                            "points size Error 0: Pass pt.track");
+     //   __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "points size Error 0: Pass pt.track");
     }
 
     float valuesf[16] = {};

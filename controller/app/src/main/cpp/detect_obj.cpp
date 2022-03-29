@@ -1,12 +1,15 @@
-//
-// Created by administrator on 2021. 12. 21..
-//
 #include <android/log.h>
 #include <opencv2/opencv.hpp>
-
 #include "detect_obj.h"
 
+#include "tensorflow/lite/model.h"
+#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/interpreter_builder.h"
+
 using namespace cv;
+using namespace tflite;
+
 
 void detect_obj::detect_points(pt_camera_info info, Mat &matInput, Mat &matResult, std::vector<Point2f> &points) {
     // Detect Green Objects for TEST before IR LED Controller
@@ -70,7 +73,7 @@ void detect_obj::detect_points(pt_camera_info info, Mat &matInput, Mat &matResul
                                 (int)i, points[i].x, points[i].y);
     */
     } else {
-        __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "There is no contours");
+  //      __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "There is no contours");
     }
   //  __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "SIZE : points : %d", (int) points.size());
 }
