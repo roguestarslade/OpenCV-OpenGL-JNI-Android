@@ -1,7 +1,5 @@
 package com.opencv.controller;
 
-import androidx.annotation.GuardedBy;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -9,9 +7,7 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
@@ -20,10 +16,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -43,14 +37,9 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -68,9 +57,7 @@ public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2, SensorEventListener {
 
     private static final String TAG = "opencv";
-    @GuardedBy("mLock")
-    private static final Object mLock = new Object();
-    public String Appdir = "/OpenCV";
+
     private Mat matInput;
     private Mat matResult;
 
@@ -84,71 +71,10 @@ public class MainActivity extends AppCompatActivity
 
     static int bDetectObj = 0;
 
-    private  final int KILL_ACTIVITY = 0;
-    private  final int START_ACTIVITY = 1;
-    private  final int SEARCH_START = 2;
-    private  final int SEARCH_END= 3;
-    private  final int CLOSE_APP = 4;
-    private  final int ERROR_LOG = 5;
-    private  final int UPDATE_PROGRESS = 6;
-    private  final int FLASH_DONE = 7;
-    private  final int START_SERVICE = 8;
-
-    public static int READ = 0;
-    public static int WRITE = 1;
-    public static int DELETE = 2;
-    public static int DELETE_ALL = 4;
-    public static int ASSETS_COPY = 3;
-
-    private static  AssetManager am;
-    private static ProgressDialog progressDialog;
-    static File mediaStorageDir;
-    static File mediaStorageDir_settings;
     // bluetooth
     private BluetoothService btService = null;
-    private static String[] arrayPermissions;
     private final Handler mHandler = new Handler(){
         @Override public void handleMessage(Message msg){
-            switch (msg.what) {
-                case KILL_ACTIVITY:
-                    //    Log.d(TAG, "finish");
-                    finish();
-                    break;
-                case START_ACTIVITY:
-                    try {
-                        mediaStorageDir = new File(Environment.getExternalStorageDirectory() + Appdir);
-                        if (!mediaStorageDir.exists()) {
-                            if (!mediaStorageDir.mkdirs()) {
-                                Log.d(TAG, "failed to create directory");
-                                mHandler.sendEmptyMessageDelayed(KILL_ACTIVITY, 0);
-                            } else {
-                                Log.d(TAG, "created directory");
-                            }
-                        }
-
-                        if (fileCopyTask != null) {
-                            if (fileCopyTask.getStatus() == AsyncTask.Status.RUNNING) {
-                                fileCopyTask.cancel(true);
-                            }
-                        }
-                        fileCopyTask = new FileCopyTask(getBaseContext());
-                        fileCopyTask.execute();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                case UPDATE_PROGRESS:
-                    try {
-                        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-                        progressDialog.setCanceledOnTouchOutside(false);
-                        //               progressDialog.setTitle(file_to_kernel);
-                        progressDialog.setMessage("Init Start");
-                        progressDialog.show();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-            }
             super.handleMessage(msg);
         }
     };
@@ -198,22 +124,11 @@ public class MainActivity extends AppCompatActivity
 
     private static LayoutInflater controlInflater;
     private static View viewControl;
-
-    private FileCopyTask fileCopyTask;
-
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("opencv_java4");
         System.loadLibrary("native-lib");
     }
-
-    private String progress_message = null;
-    private Runnable changeText = new Runnable() {
-        @Override
-        public void run() {
-            progressDialog.setMessage(progress_message);
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -221,8 +136,6 @@ public class MainActivity extends AppCompatActivity
 
         try {
             Log.d(TAG, "onCreate");
-
-
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN);
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
@@ -236,13 +149,7 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "init OpenGL");
             //add Permission to ArrayList
             permissions.add(Manifest.permission.CAMERA);
-            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-            if (checkPermissions() == false) {
-                mHandler.sendEmptyMessageDelayed(START_ACTIVITY, 0);
-            }
-
+            checkPermissions();
 
 //      mOpenCvCameraView = (CameraBridgeViewBase)findViewById(R.id.activity_surface_view);
             mOpenCvCameraView = (CameraBridgeViewBase) new JavaCameraView(this, -1);
@@ -255,9 +162,6 @@ public class MainActivity extends AppCompatActivity
             viewControl = controlInflater.inflate(R.layout.control, null);
 
             addContentView(viewControl, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-            am = getResources().getAssets();
-            progressDialog = new ProgressDialog(MainActivity.this);
-
 
             java_textview = (TextView) viewControl.findViewById(R.id.text_java);
             java_textview.setText("java_text view");
@@ -272,13 +176,15 @@ public class MainActivity extends AppCompatActivity
             nv_row3 = (TextView) viewControl.findViewById(R.id.nv_row3);
             nv_row4 = (TextView) viewControl.findViewById(R.id.nv_row4);
             // NDK Rotation Matrix initialize
-
-
             InitMatrix();
-
-
-
+            // Example of a call to a native method
+            //textView.setText(stringFromJNI());
             /*
+            AssetManager am = getResources().getAssets();
+            Log.d(TAG, "resource lists : " + am.toString());
+            InputStream in = null;
+            in = am.open("test.txt");
+            */
             AssetFileDescriptor fileDescriptor = getResources().getAssets().openFd("test.txt");
             FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
             FileChannel fileChannel = inputStream.getChannel();
@@ -287,9 +193,9 @@ public class MainActivity extends AppCompatActivity
             MappedByteBuffer modelBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
             InitJniWithByteBuffer(modelBuffer);
             Log.d(TAG, "try to get assets : " + fileDescriptor.getLength() + " " + fileDescriptor.toString());
-*/
+
             // Bluetooth
-            if (false) { // for GL TEST
+            if (true) { // for GL TEST
                 if (btService == null) {
                     Log.i(TAG, "try new BluetoothService");
                     btService = new BluetoothService(this, mHandler);
@@ -318,15 +224,10 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onStart() {
         super.onStart();
-        /*
         boolean havePermission = true;
-
 
         if (havePermission) {
             onCameraPermissionGranted();
-            Log.d(TAG, "permission accepted");
-        } else {
-            Log.d(TAG, "permission denied");
         }
 
 		if (!btService.mAdapter.isEnabled()) {
@@ -337,8 +238,6 @@ public class MainActivity extends AppCompatActivity
             Log.i(TAG, "try new BluetoothService");
             btService = new BluetoothService(this, mHandler);
         }
-
-        */
     }
 
     @Override
@@ -359,10 +258,8 @@ public class MainActivity extends AppCompatActivity
     public void onResume()
     {
         super.onResume();
-        if (checkPermissions() == false) {
-            mHandler.sendEmptyMessageDelayed(KILL_ACTIVITY, 0);
-            return;
-        }
+
+        checkPermissions();
 
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "onResume :: Internal OpenCV library not found.");
@@ -405,15 +302,9 @@ public class MainActivity extends AppCompatActivity
     public void onDestroy() {
         super.onDestroy();
         // Stop the Bluetooth chat services
-        if (fileCopyTask != null) {
-            if (fileCopyTask.getStatus() == AsyncTask.Status.RUNNING) {
-                fileCopyTask.cancel(true);
-            }
-        }
-/*
         if (btService == null)
             btService.stop();
-*/
+			
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
 			
@@ -587,7 +478,7 @@ public class MainActivity extends AppCompatActivity
 
     //여기부터는 런타임 퍼미션 처리을 위한 메소드들
     @TargetApi(Build.VERSION_CODES.M)
-    private boolean checkPermissions() {
+    private void checkPermissions() {
         int permissonCnt = 0;
         Boolean needPermissionRequest = false;
         Boolean needRationaleRequest = false;
@@ -595,7 +486,7 @@ public class MainActivity extends AppCompatActivity
         permissonCnt = permissions.size();
 
         //arraylist to string array
-        arrayPermissions = permissions.toArray(new String[permissonCnt]);
+        String[] arrayPermissions = permissions.toArray(new String[permissonCnt]);
 
         for (int i = 0; i < permissonCnt; i++) {
             Object obj = permissions.get(i);
@@ -603,7 +494,7 @@ public class MainActivity extends AppCompatActivity
                 String str = (String) obj;
                 permissonsRationale.add(new Boolean(ActivityCompat.shouldShowRequestPermissionRationale(this, str)));
                 hasPermissions.add(new Integer(ContextCompat.checkSelfPermission(this, str)));
-                      Log.d(TAG, " " + str + ": " + hasPermissions.get(i) + ", " + permissonsRationale.get(i));
+                //      Log.d(TAG, " " + str + ": " + hasPermissions.get(i) + ", " + permissonsRationale.get(i));
 
                 if ((Integer) hasPermissions.get(i) == PackageManager.PERMISSION_DENIED) {
                     needPermissionRequest = true;
@@ -621,8 +512,8 @@ public class MainActivity extends AppCompatActivity
             //     Log.d(TAG,"requesting...");
         }
 
-
-        return needPermissionRequest;
+        if ((Integer) hasPermissions.get(0) == PackageManager.PERMISSION_GRANTED) {
+        }
     }
 
     protected void onCameraPermissionGranted() {
@@ -638,30 +529,15 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onRequestPermissionsResult(int permsRequestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        int result = -2;
-        //    Log.d(TAG, "permissionResult");
-
-        for (int i = 0; i < grantResults.length; i++) {
-            //       Log.d(TAG, "results[" +i +"]: " + grantResults[i] + " RequseCode:" + permsRequestCode +" String[" + i +"]:" + permissions[i]);
-            if (permissions[i].toString().contains(arrayPermissions[i]) && grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                result++;
-            }
+    @TargetApi(Build.VERSION_CODES.M)
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            onCameraPermissionGranted();
+        } else{
         }
-
-        if (result == PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "permission accepted");
-            mHandler.sendEmptyMessageDelayed(START_ACTIVITY, 0);
-            Toast.makeText(this, "Permission Get Success", Toast.LENGTH_LONG).show();
-        } else {
-            Log.d(TAG, "permission denied");
-            Toast.makeText(this, "Permission Get Failed", Toast.LENGTH_LONG).show();
-            mHandler.sendEmptyMessageDelayed(KILL_ACTIVITY, 0);
-        }
-        super.onRequestPermissionsResult(permsRequestCode, permissions, grantResults);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
+
     /**
      * A native method that is implemented by the 'controller' native library,
      * which is packaged with this application.
@@ -801,130 +677,10 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    static String txt_file_rw(String path, int rw, String data, String data_1, int mode) {
-        String str = null;
-
-        String line;
-        Log.d(TAG, "txt_file_rw " + rw);
-        synchronized (mLock) {
-            if (rw == READ) {
-
-            } else if (rw == WRITE) {
-
-            } else if (rw == DELETE) {
-
-            } else if (rw == ASSETS_COPY) {
-                try {
-                    Log.d(TAG, "ASSETS_COPY" + path + " data: " + data + " data_1: " + data_1);
-                    //           Log.d(TAG, "try to write " + path + " data: " + data);
-
-                    InputStream in = null;
-                    in = am.open(data);
-                    File write_file;
-                    if (data_1 != null) {
-                        write_file = new File(path + "/" + data_1);
-                        if (write_file.exists()) {
-                            Log.d(TAG, write_file.toString() + " exist");
-                            return "exist";
-                        }
-                    } else {
-                        write_file = new File(path + "/" + data);
-                        if (write_file.exists()) {
-                            Log.d(TAG, write_file.toString() + " exist");
-                            return "exist";
-                        }
-                    }
-
-                    OutputStream out = new FileOutputStream(write_file, false);
-                    int data_size = (64 * 1024);
-                    byte[] buffer = new byte[data_size];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
-                        try {
-                            Thread.sleep(3);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                    in.close();
-
-                    // write the output file (You have now copied the file)
-                    out.flush();
-                    out.close();
-                    Log.d(TAG, "copy done");
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return str;
-    }
-
-
-
-
-    private class FileCopyTask extends AsyncTask {
-        private Context mContext;
-
-        public FileCopyTask(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        protected Object doInBackground(Object[] objects) {
-            try {
-                Log.d(TAG, "create settings directory");
-
-                //       Log.d(TAG, "settings file");
-                mediaStorageDir_settings = new File(Environment.getExternalStorageDirectory() + Appdir + "/samples");
-                if (!mediaStorageDir_settings.exists()) {
-                    if (!mediaStorageDir_settings.mkdirs()) {
-                        Log.d(TAG, "failed to create directory");
-                    } else {
-                        progress_message = "copy ssd_mobilenet_v1_1_metadata_1.tflite";
-                        runOnUiThread(changeText);
-                        txt_file_rw(mediaStorageDir_settings.toString(), ASSETS_COPY, "ssd_mobilenet_v1_1_metadata_1.tflite",null, 0);
-                        progress_message = "copy hand_landmark_lite.tflite";
-                        runOnUiThread(changeText);
-                        txt_file_rw(mediaStorageDir_settings.toString(), ASSETS_COPY, "hand_landmark_lite.tflite",null,0);
-                        progress_message = "copy test.txt";
-                        runOnUiThread(changeText);
-                        txt_file_rw(mediaStorageDir_settings.toString(), ASSETS_COPY, "test.txt", null,0);
-                    }
-                }
-
-
-
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            Log.d(TAG,"Start FileCopy Task");
-            mHandler.sendEmptyMessageDelayed(UPDATE_PROGRESS, 0);
-            super.onPreExecute();
-        }
-        @Override
-        protected void onPostExecute(Object o) {
-            Log.d(TAG,"End FileCopy Task");
-            mHandler.sendEmptyMessageDelayed(SEARCH_START, 0);
-        }
-    }
-
-
-
-
     public void setBTstatus(String str) {
         mOpenCvCameraView.setBTStatus(str);
     }
+
 
     public void setTouchEvent (int event) {
         mTouchStatus = event;
