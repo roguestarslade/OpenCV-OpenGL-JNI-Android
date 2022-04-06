@@ -114,7 +114,7 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
     }
 
     if (g_size <= 2) {
-        __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "size not enough");
+  //      __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "size not enough");
     } else {
         int diff = g_size - m_size;
         if (diff != 0) {
