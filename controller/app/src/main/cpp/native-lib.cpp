@@ -6,8 +6,13 @@
 #include <android/log.h>
 
 #include "detect_obj.h"
+#include "tflite_obj.h"
 #include "point_tracker.h"
 #include "point_obj.h"
+
+#include <assert.h>
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
 
 using namespace cv;
 
@@ -22,13 +27,40 @@ Mat gr;
 point_obj objLeft;
 pt_camera_info info;
 
-
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_opencv_controller_MainActivity_InitJniWithByteBuffer(JNIEnv* env, jobject thiz, jobject model_buffer) {
-      char* buffer = static_cast<char*>(env->GetDirectBufferAddress(model_buffer));
-      size_t buffer_size = static_cast<size_t>(env->GetDirectBufferCapacity(model_buffer));
-      __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "InitJniWithByteBuffer: %s ", buffer);
+    info.tflite_model = static_cast<char*>(env->GetDirectBufferAddress(model_buffer));
+    info.tflite_model_size = static_cast<int>(env->GetDirectBufferCapacity(model_buffer));
+    __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "get DATA : %p %d", info.tflite_model, info.tflite_model_size);
+
+    tflite_obj tobj;
+    tobj.tflite_load_model(info);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_opencv_controller_MainActivity_AssetsfromJAVA(JNIEnv* env, jobject thiz, jobject assetManager) {
+    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+    AAssetDir* assetDir = AAssetManager_openDir(mgr, "");
+    const char* filename = (const char*)NULL;
+    while ((filename = AAssetDir_getNextFileName(assetDir)) != NULL) {
+        AAsset* asset = AAssetManager_open(mgr, filename, AASSET_MODE_STREAMING);
+        __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "get Assets from java : %s", filename);
+
+        /*
+        char buf[BUFSIZ];
+        int nb_read = 0;
+        FILE* out = fopen(filename, "w");
+        while ((nb_read = AAsset_read(asset, buf, BUFSIZ)) > 0) {
+            if (buf != NULL && out != NULL)
+                fwrite(buf, nb_read, 1, out);
+        }
+        fclose(out);
+         */
+        AAsset_close(asset);
+    }
+    AAssetDir_close(assetDir);
 }
 
 extern "C"

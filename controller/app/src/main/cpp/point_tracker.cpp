@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "point_tracker.h"
+#include "tflite_obj.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,8 @@ using namespace std;
 //float *temp_array;
 std::vector<Point3f> model_points;
 std::vector<Point3f> object_points;
+
+tflite_obj tobj;
 
 Point2f point_tracker::avg_coord(std::vector<Point2f> getPoints) {
 
@@ -147,6 +150,8 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
 
         projectPoints(end_point3f, irvec, itvec, camera_matrix, dist_coeffs, end_point2f);
         line(img, mid_point, end_point2f[0], Scalar(0,0,255), 1);
+
+        tobj.tflite_model(info, img, image_points);
 
         for (int i = 0; i < g_size; i++) {
             line(img, mid_point, image_points[i], Scalar(255,255,255), 1);

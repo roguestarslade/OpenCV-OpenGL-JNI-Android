@@ -14,7 +14,7 @@ https://github.com/Charlezz/OpenGLStudy
 public class Cube {
     private FloatBuffer vertexBuffer;  // Buffer for vertex-array
     private ByteBuffer indexBuffer;
-    private static final String TAG = "opencv";
+    private static final String TAG = "opencv_java_cube";
     private final String vertexShaderCode =
             "uniform mat4 uMVPMatrix;" +
                     "attribute vec4 vPosition;" +

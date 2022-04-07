@@ -2,14 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include "detect_obj.h"
 
-#include "tensorflow/lite/model.h"
-#include "tensorflow/lite/interpreter.h"
-#include "tensorflow/lite/kernels/register.h"
-#include "tensorflow/lite/interpreter_builder.h"
-
 using namespace cv;
-using namespace tflite;
-
 
 void detect_obj::detect_points(pt_camera_info info, Mat &matInput, Mat &matResult, std::vector<Point2f> &points) {
     // Detect Green Objects for TEST before IR LED Controller

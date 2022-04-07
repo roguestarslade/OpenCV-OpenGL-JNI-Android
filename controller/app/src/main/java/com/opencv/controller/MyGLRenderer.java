@@ -10,7 +10,7 @@ import android.opengl.Matrix;
 import android.util.Log;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
-    private static final String TAG = "opencv";
+    private static final String TAG = "opencv_java_MyGL";
     private Cube mCube;
     private Line mLine_LX;
     private Line mLine_LY;

@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.18.1)
 # Declares and names the project.
 
 project("controller")
-set(pathPROJECT D:/Ubuntu/Files/Project_5/controller)
+set(pathPROJECT D:/Ubuntu/Files/APPS/Project_5/controller)
 set(pathOPENCV ${pathPROJECT}/sdk)
 set(pathLIBOPENCV_JAVA ${pathOPENCV}/native/libs/${ANDROID_ABI}/libopencv_java4.so)
 
@@ -28,17 +28,17 @@ set_target_properties(libtensorflowLite_gpu PROPERTIES IMPORTED_LOCATION
 		${tf_DIR}/lib/${ANDROID_ABI}/libtensorflowlite_gpu_delegate.so)
 
 #libnnapi_util
-add_library(libnnapi_util SHARED IMPORTED)
+add_library(libnnapi_util STATIC IMPORTED)
 set_target_properties(libnnapi_util PROPERTIES IMPORTED_LOCATION
 		${tf_DIR}/lib/${ANDROID_ABI}/libnnapi_util.a)
 
 #libnnapi_implementation
-add_library(libnnapi_implementation SHARED IMPORTED)
+add_library(libnnapi_implementation STATIC IMPORTED)
 set_target_properties(libnnapi_implementation PROPERTIES IMPORTED_LOCATION
 		${tf_DIR}/lib/${ANDROID_ABI}/libnnapi_implementation.a)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
 
 include_directories(${pathOPENCV}/native/jni/include)
 
@@ -61,10 +61,12 @@ add_library(
         point_tracker.cpp
         point_obj.cpp
         point_obj.h
+		tflite_obj.cpp
+		tflite_obj.h
 	)
 
 # This indicates where the header files are found relative to our distribution dir
-target_include_directories(native-lib PRIVATE
+target_include_directories(native-lib PUBLIC
 		${tf_DIR}/include)
 
 add_library( lib_opencv SHARED IMPORTED )
@@ -90,6 +92,7 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
         native-lib
+		android
         lib_opencv
 		libtensorflowLite
 		libtensorflowLite_gpu

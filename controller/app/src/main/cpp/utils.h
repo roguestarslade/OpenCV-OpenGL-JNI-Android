@@ -7,7 +7,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#define APPNAME "opencv"
+#define APPNAME "opencv_native"
 
 // Definition
 using f = float;
@@ -36,6 +36,9 @@ struct pt_camera_info final
 
     double* rv;
     double* tv;
+
+    char* tflite_model;
+    int tflite_model_size;
 };
 
 #endif //CONTROLLER_UTILS_H

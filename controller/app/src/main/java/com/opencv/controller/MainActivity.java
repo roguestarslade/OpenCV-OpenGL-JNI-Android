@@ -64,7 +64,7 @@ https://webnautes.tistory.com/1054?category=704164
 public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2, SensorEventListener {
 
-    private static final String TAG = "opencv";
+    private static final String TAG = "opencv_java_main";
     @GuardedBy("mLock")
     private static final Object mLock = new Object();
     public String Appdir = "/openCV";
@@ -74,44 +74,41 @@ public class MainActivity extends AppCompatActivity
     private static Context mContext;
     public static CameraBridgeViewBase mOpenCvCameraView;
 
-    static native int ConvertRGBtoGray(long matAddrInput, long matAddrResult, float[] matAddrRotation, int[] cInfo);
+    public native int ConvertRGBtoGray(long matAddrInput, long matAddrResult, float[] matAddrRotation, int[] cInfo);
     public native void GetRvecTvec(float[] mat_addr_rvec, float[] mat_addr_info);
-    static native void NativeInfo(float[] mat_addr_tvec);
-    static native void InitMatrix();
-    static native void InitJniWithByteBuffer(ByteBuffer modelBuffer);
+    public native void NativeInfo(float[] mat_addr_tvec);
+    public native void InitMatrix();
+    public native void InitJniWithByteBuffer(ByteBuffer modelBuffer);
+    public native void AssetsfromJAVA (AssetManager assetManager);
 
     static int bDetectObj = 0;
 
-    private  final int KILL_ACTIVITY = 0;
-    private  final int START_ACTIVITY = 1;
-    private  final int SEARCH_START = 2;
-    private  final int SEARCH_END= 3;
-    private  final int CLOSE_APP = 4;
-    private  final int ERROR_LOG = 5;
-    private  final int UPDATE_PROGRESS = 6;
-    private  final int FLASH_DONE = 7;
-    private  final int START_SERVICE = 8;
-    private  final int FILE_CONTROL = 9;
+    private final int KILL_ACTIVITY = 0;
+    private final int START_ACTIVITY = 1;
+    private final int SEARCH_START = 2;
+    private final int SEARCH_END= 3;
+    private final int CLOSE_APP = 4;
+    private final int ERROR_LOG = 5;
+    private final int UPDATE_PROGRESS = 6;
+    private final int FLASH_DONE = 7;
+    private final int START_SERVICE = 8;
+    private final int FILE_CONTROL = 9;
 
-    static final int JAVA_FILE = 1;
-    static final int NATIVE_FILE = 2;
+    private final int JAVA_FILE = 1;
+    private final int NATIVE_FILE = 2;
 
-
-
-    public static int READ = 0;
-    public static int WRITE = 1;
-    public static int DELETE = 2;
-    public static int ASSETS_COPY = 3;
-    public static int DELETE_ALL = 4;
-    public static int NATIVE_COPY = 5;
+    private final int READ = 0;
+    private final int WRITE = 1;
+    private final int DELETE = 2;
+    private final int ASSETS_COPY = 3;
+    private final int DELETE_ALL = 4;
+    private final int NATIVE_COPY = 5;
 
     private PermissionSupport permission;
     private static  AssetManager am;
     private static ProgressDialog progressDialog;
 
-    static File rootDir;
-    static File assetsDir;
-
+    static File rootDir = null;
 
     private final Handler mHandler = new Handler(){
         @Override public void handleMessage(Message msg){
@@ -121,12 +118,11 @@ public class MainActivity extends AppCompatActivity
                     Log.d(TAG, "finish");
                     finish();
                     break;
+
                 case FILE_CONTROL:
                     switch (msg.arg1) {
                         case JAVA_FILE:
                             try {
-                                rootDir = mContext.getExternalFilesDir(Appdir);
-                                Log.d(TAG, "rootDir: " + rootDir);
                                 if (!rootDir.exists()) {
                                     if (!rootDir.mkdirs()) {
                                         Log.d(TAG, "failed to create root directory");
@@ -161,6 +157,7 @@ public class MainActivity extends AppCompatActivity
                             break;
                     }
                     break;
+
                 case UPDATE_PROGRESS:
                     try {
                         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
@@ -258,9 +255,14 @@ public class MainActivity extends AppCompatActivity
                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             permissionCheck();
-
             init_main_ui();
 
+            am = getResources().getAssets();
+            rootDir = mContext.getExternalFilesDir(Appdir);
+
+      //    AssetsfromJAVA(am);
+
+            Log.d(TAG, "rootDir: " + rootDir);
         // Sensor
         /*
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -309,10 +311,7 @@ public class MainActivity extends AppCompatActivity
             nv_row4 = (TextView) viewControl.findViewById(R.id.nv_row4);
             // NDK Rotation Matrix initialize
             InitMatrix();
-
-            am = getResources().getAssets();
             progressDialog = new ProgressDialog(MainActivity.this);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -720,8 +719,6 @@ public class MainActivity extends AppCompatActivity
 
     private String txt_file_rw(String path, int rw, String data, String data_1, int mode) {
         String str = null;
-
-        String line;
         Log.d(TAG, "txt_file_rw " + rw);
         synchronized (mLock) {
             if (rw == READ) {
@@ -733,15 +730,14 @@ public class MainActivity extends AppCompatActivity
             } else if (rw == NATIVE_COPY) {
                 try {
                     Log.d(TAG, "NATIVE_COPY" + path + " data: " + data + " data_1: " + data_1);
-
                     AssetFileDescriptor fileDescriptor = am.openFd(data);
                     FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
                     FileChannel fileChannel = inputStream.getChannel();
                     long startOffset = fileDescriptor.getStartOffset();
                     long declaredLength = fileDescriptor.getDeclaredLength();
+                    Log.d(TAG, "startOffset : " + startOffset + " declatedLength: " + declaredLength);
                     MappedByteBuffer modelBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
                     InitJniWithByteBuffer(modelBuffer);
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -825,7 +821,7 @@ public class MainActivity extends AppCompatActivity
                 } else if (mCmd == NATIVE_COPY) {
                     progress_message = "copy test.txt to native";
                     runOnUiThread(changeText);
-                    txt_file_rw(rootDir.toString(), NATIVE_COPY, "test.txt", null,0);
+                    txt_file_rw(rootDir.toString(), NATIVE_COPY, "hand_landmark_lite.tflite", null,0);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
