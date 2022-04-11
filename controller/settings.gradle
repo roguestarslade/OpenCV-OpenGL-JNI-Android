@@ -10,10 +10,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        jcenter()
     }
 }
 
+
+
 rootProject.name = "controller"
 include ':app'
-include ':sdk'
+include ":opencv"
+project(":opencv").projectDir = file("/extern_modules/opencv")
+
 

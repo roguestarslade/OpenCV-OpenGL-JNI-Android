@@ -10,6 +10,7 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "opencv2/opencv.hpp"
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,25 +51,57 @@ void tflite_obj:: tflite_load_model(pt_camera_info info)
     tflite::PrintInterpreterState(interpreter.get());
 }
 
-void tflite_obj:: tflite_model(pt_camera_info info, InputOutputArray img, std::vector<Point2f> getPoints) {
-
-    __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "tflite_model");
-
+void tflite_obj:: tflite_model(pt_camera_info info, Mat &matInput, std::vector<Point2f> getPoints)
+{
     // Fill input buffers
     // TODO(user): Insert code to fill input tensors.
     // Note: The buffer of the input tensor with index `i` of type T can
     float* input = interpreter->typed_input_tensor<float>(0);
-
     //check size here
-    memcpy(input, &img, info.res_x*info.res_y*sizeof(float));
 
+    /*
+    // creating a Tensor for storing the data
+    tflite::Tensor input_tensor(DT_FLOAT, TensorShape({1,matInput.rows, matInput.cols,
+                                                                       matInput.depth()}));
+    auto input_tensor_mapped = input_tensor.tensor<float, 4>();
+
+
+    // allocate a Tensor
+    Tensor inputImg(Tensor::DT_FLOAT, TensorShape({1, matInput.rows, matInput.cols, 3}));
+    // get pointer to memory for that Tensor
+    float *p = inputImg.flat<float>().data();
+    // create a "fake" cv::Mat from it
+    cv::Mat cameraImg(matInput.rows, matInput.cols, CV_64FC1, p);
+    // use it here as a destination
+    cv::Mat imagePixels = matInput; // get data from your video pipeline
+    imagePixels.convertTo(cameraImg, CV_64FC1);
+*/
+
+    void* object = (void*)matInput.ptr() ;
+
+    //C++ API
+    /*
+    tflite::Tensor input_tensor(flatbuffers::ET_FLOAT, tensorflow::TensorShape({1,matInput.rows, matInput.cols,
+                                                       matInput.depth()}));
+    int data_size = matInput.rows * matInput.cols * matInput.depth() * sizeof(float);
+    std::copy_n((float*)object, data_size, (input_tensor.flat<float>()).data());
+*/
+
+    //ToDo
+    int data_size = matInput.rows * matInput.cols * matInput.depth() * sizeof(float);
+    memcpy(input, object, data_size);
     // Run inference
     TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
     tflite::PrintInterpreterState(interpreter.get());
 
-    float* output = interpreter->typed_output_tensor<float>(0);
+   // float* output = interpreter->typed_output_tensor<float>(0);
+    int output_idx = interpreter->outputs()[0];
+    float* output = interpreter->typed_output_tensor<float>(output_idx);
+
     std::ostringstream cout;
-    cout << output[0];
+    cout << "OUTPUT: " << *output << std::endl;
     cout << "\n-------\n";
+
     __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "%s", cout.str().c_str());
+
 }

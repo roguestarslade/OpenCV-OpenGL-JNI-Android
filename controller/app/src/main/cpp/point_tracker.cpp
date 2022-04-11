@@ -17,8 +17,6 @@ using namespace std;
 std::vector<Point3f> model_points;
 std::vector<Point3f> object_points;
 
-tflite_obj tobj;
-
 Point2f point_tracker::avg_coord(std::vector<Point2f> getPoints) {
 
     float avg_x = 0;
@@ -54,7 +52,7 @@ bool point_comparator(pair<Point2f, float> a, pair<Point2f, float> b) {
 void point_tracker::refresh_model_points(std::vector<Point2f> getPoints) {
     model_points.clear();
     object_points.clear();
-    __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "refresh model points");
+    //__android_log_print(ANDROID_LOG_DEBUG, APPNAME, "refresh model points");
     // 3D model points.
     for (int i = 0; i < getPoints.size(); i++) {
         model_points.push_back(Point3f(getPoints[i].x, getPoints[i].y, 10.0f));
@@ -78,7 +76,7 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
     int g_size = getPoints.size();
 
  //   __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "size: %d %d", g_size, m_size);
-  //  __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "%s %d %d %f %d", "estimate_pose", info.res_x, info.res_y, info.fov, info.touch_status);
+//    __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "%s %d %d %f %d", "estimate_pose", info.res_x, info.res_y, info.fov, info.touch_status);
 
     Point2f mid_point = avg_coord(getPoints);
     std::vector<pair<Point2f, float>> points_dis;
@@ -150,8 +148,6 @@ bool point_tracker::estimate_pose(pt_camera_info info, InputOutputArray img, std
 
         projectPoints(end_point3f, irvec, itvec, camera_matrix, dist_coeffs, end_point2f);
         line(img, mid_point, end_point2f[0], Scalar(0,0,255), 1);
-
-        tobj.tflite_model(info, img, image_points);
 
         for (int i = 0; i < g_size; i++) {
             line(img, mid_point, image_points[i], Scalar(255,255,255), 1);

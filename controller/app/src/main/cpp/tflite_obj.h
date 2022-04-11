@@ -18,6 +18,6 @@ using namespace cv;
 class tflite_obj {
 public:
     void tflite_load_model(pt_camera_info info);
-    void tflite_model(pt_camera_info info, InputOutputArray img, std::vector<Point2f> getPoints);
+    void tflite_model(pt_camera_info info, Mat &matInput, std::vector<Point2f> getPoints);
 };
 #endif //CONTROLLER_TFLITE_OBJ_H

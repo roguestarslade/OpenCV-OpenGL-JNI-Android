@@ -6,36 +6,32 @@
 cmake_minimum_required(VERSION 3.18.1)
 
 # Declares and names the project.
-
 project("controller")
-set(pathPROJECT D:/Ubuntu/Files/APPS/Project_5/controller)
-set(pathOPENCV ${pathPROJECT}/sdk)
+set(pathPROJECT ${CMAKE_SOURCE_DIR}/../../../../extern_modules)
+set(pathOPENCV ${pathPROJECT}/opencv)
 set(pathLIBOPENCV_JAVA ${pathOPENCV}/native/libs/${ANDROID_ABI}/libopencv_java4.so)
 
 # configure import TF libs
-set(tf_DIR ${CMAKE_SOURCE_DIR}/../../../../tensorflow)
+set(tf_DIR ${pathPROJECT}/tflite)
 
 # This states that there exists a shared library called libtensorflowLite
 # which will be imported (means it is not built with the rest of the project!)
 add_library(libtensorflowLite SHARED IMPORTED)
 # This indicates where the libtensorflowLite.so for each architecture is found relative to our distribution directory
 set_target_properties(libtensorflowLite PROPERTIES IMPORTED_LOCATION
-		${tf_DIR}/lib/${ANDROID_ABI}/libtensorflowlite_c.so)
-
+		${tf_DIR}/libs/${ANDROID_ABI}/libtensorflowlite.so)
 #gpu_delegate
 add_library(libtensorflowLite_gpu SHARED IMPORTED)
 set_target_properties(libtensorflowLite_gpu PROPERTIES IMPORTED_LOCATION
-		${tf_DIR}/lib/${ANDROID_ABI}/libtensorflowlite_gpu_delegate.so)
-
+		${tf_DIR}/libs/${ANDROID_ABI}/libtensorflowlite_gpu_delegate.so)
 #libnnapi_util
 add_library(libnnapi_util STATIC IMPORTED)
 set_target_properties(libnnapi_util PROPERTIES IMPORTED_LOCATION
-		${tf_DIR}/lib/${ANDROID_ABI}/libnnapi_util.a)
-
+		${tf_DIR}/libs/${ANDROID_ABI}/libnnapi_util.a)
 #libnnapi_implementation
 add_library(libnnapi_implementation STATIC IMPORTED)
 set_target_properties(libnnapi_implementation PROPERTIES IMPORTED_LOCATION
-		${tf_DIR}/lib/${ANDROID_ABI}/libnnapi_implementation.a)
+		${tf_DIR}/libs/${ANDROID_ABI}/libnnapi_implementation.a)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
@@ -67,7 +63,7 @@ add_library(
 
 # This indicates where the header files are found relative to our distribution dir
 target_include_directories(native-lib PUBLIC
-		${tf_DIR}/include)
+		${pathPROJECT}/include)
 
 add_library( lib_opencv SHARED IMPORTED )
 

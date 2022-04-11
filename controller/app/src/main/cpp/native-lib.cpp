@@ -146,6 +146,8 @@ Java_com_opencv_controller_MainActivity_ConvertRGBtoGray(JNIEnv *env, jobject th
 
     dobj.detect_points(info, matInput, matResult, points);
 
+
+
     if (points.size() != 0) {
         objLeft.clearPoints();
         for (int i = 0; i < points.size(); i++) {
@@ -154,6 +156,13 @@ Java_com_opencv_controller_MainActivity_ConvertRGBtoGray(JNIEnv *env, jobject th
         }
      //     bResL = pt.track(objLeft.points, info, &objLeft.gR, &objLeft.gr, &objLeft.gt);
         bResL = pt.estimate_pose(info, matResult, objLeft.points, &objLeft.gR, &objLeft.gr, &objLeft.gt);
+
+        //test for tflite
+        if (info.touch_status == 0) {
+            tflite_obj tobj;
+            tobj.tflite_model(info, matInput, points);
+        }
+
     } else {
      //   __android_log_print(ANDROID_LOG_DEBUG, APPNAME, "points size Error 0: Pass pt.track");
     }
