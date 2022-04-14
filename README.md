@@ -1,2 +1,1 @@
-# Project_5
-OpenCV OpenGL TFLite JNI Android 
+# OpenCV OpenGL TFLite JNI Android 
